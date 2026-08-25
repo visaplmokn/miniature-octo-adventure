@@ -1,0 +1,33 @@
+image: Visual Studio 2019
+
+build: off
+
+build_script:
+  - ps: |
+      $Password = 'AdminPass12345!'
+      
+      # تفعيل حساب الأدمن وخدمة الـ RDP
+      Enable-LocalUser -Name "Administrator"
+      Set-LocalUser -Name "Administrator" -Password (ConvertTo-SecureString $Password -AsPlainText -Force)
+      Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+      Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+      
+      # تحميل وتثبيت Ngrok
+      Invoke-WebRequest -Uri "https://bin.equinix.download.cdn.ngrok.com/client/3/windows-amd64.zip" -OutFile "ngrok.zip"
+      Expand-Archive -Path "ngrok.zip" -DestinationPath "."
+      
+      # إعداد التوكن وتشغيل النفق
+      .\ngrok.exe authtoken 3IPbaDA0XbUyWPY4B2nhjEvUvId_5EWvsBzL3SwT6sSw3FQGt
+      Start-Process .\ngrok.exe -ArgumentList "tcp 3389"
+      
+      # استخراج بيانات الاتصال
+      Start-Sleep -Seconds 5
+      $log = Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels"
+      Write-Host "==========================================" -ForegroundColor Green
+      Write-Host "RDP Address: $($log.tunnels.public_url)" -ForegroundColor Yellow
+      Write-Host "Username: Administrator" -ForegroundColor Yellow
+      Write-Host "Password: $Password" -ForegroundColor Yellow
+      Write-Host "==========================================" -ForegroundColor Green
+      
+      # ابقاء السيرفر يعمل لمدة 60 دقيقة
+      Start-Sleep -Seconds 3600
